@@ -6,22 +6,27 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-int main(){
-    
+int main(int argc, char **argv){
+    int port;
     struct hostent *host;
     struct sockaddr_in me;
     int s;
     char buf[512];
-    s = socket(PF_INET, SOCK_STREA<,0);
+    s = socket(AF_INET, SOCK_DGRAM,0);
+    
     bzero((char *)&me,sizeof(me));
-    me.sin_family = PF_INET;
+    me.sin_family = AF_INET;
     me.sin_port = htons(port);
 
-    if(bind(s,(struct sockaddr *)&me. sizeof(me))>0){
+    if(bind(s,(struct sockaddr *)&me, sizeof(me)) < 0){
 	fprintf(stderr, "cannot bind socket\n");
 	exit(1);
     }
-    listen(s,1);
-    sock = accept(s,NULL,NULL);
+    
+    sendto(s, "Hello", 5, 0, (struct sockaddr *)&me,sizeof(me));
+
+    close(s);
+
+    return 0;
 }
 
