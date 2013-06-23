@@ -82,24 +82,24 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 	fprintf(stderr,"cannot get framebuffer\n");
 	exit(1);
     }
-
-    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
-
     
-printf("the first pointer is %d,and the first char is %d\n",fbptr+location,*(fbptr+location));
-printf("the 100th pointer is %d,and the 100th char is %d\n",fbptr+100,*(fbptr+100));
 printf("the frame buffer device was mapped\n");
-    munmap(fbptr,screensize);
-    close(fd);
-
+    
+    for(y=0;y<yres;y++){
+	for(x=0;x<xres;x++){
+	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
+	    //printf("pointer %p,and the value is %x\n",(unsigned int *)(fbptr+location),*(unsigned int *)(fbptr+location));
+	    sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
+	}
+    }
 
     /* sending a packet on UDP */
-    sendto(s, "Hello", 5, 0, (struct sockaddr *)&me,sizeof(me));
+    //sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
 
+    munmap(fbptr,screensize);
     /* close the filediscriptor of socket */
     close(s);
-
+    close(fd);
 
     return 0;
 }
-
