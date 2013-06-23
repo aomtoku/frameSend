@@ -74,14 +74,19 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 
     /*memory I/O */
     char *fbptr;
+    long int location;
+    int x,y = 0;
 
     fbptr = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
     if((int)fbptr == -1){
 	fprintf(stderr,"cannot get framebuffer\n");
 	exit(1);
     }
+
+    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
+
     
-printf("the first pointer is %d,and the first char is %d\n",fbptr,*fbptr);
+printf("the first pointer is %d,and the first char is %d\n",fbptr+location,*(fbptr+location));
 printf("the 100th pointer is %d,and the 100th char is %d\n",fbptr+100,*(fbptr+100));
 printf("the frame buffer device was mapped\n");
     munmap(fbptr,screensize);
