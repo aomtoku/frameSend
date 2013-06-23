@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <fcntl.h>
 
 /* include file for socket communication */
 #include <sys/socket.h>
@@ -49,8 +50,8 @@ int main(int argc, char **argv){
     int fd, screensize;
 
     fd = open(DEVICE_NAME, O_RDWR);
-    if(fd!){
-	printf(stderr, "cannot open the FrameBuffer '/dev/fb0' \n");
+    if(!fd){
+	fprintf(stderr, "cannot open the FrameBuffer '/dev/fb0' \n");
 	exit(1);
     }
 
@@ -58,28 +59,30 @@ int main(int argc, char **argv){
     struct fb_fix_screeninfo finfo;
 
     if(ioctl(fd,FBIOGET_FSCREENINFO, &finfo)){
-	printf(stderr, "cannot \n");
+	fprintf(stderr, "cannot fix info\n");
 	exit(1);
     }
     if(ioctl(fd,FBIOGET_VSCREENINFO, &vinfo)){
-	printf(stderr, "cannot \n");
+	fprintf(stderr, "cannot variable info\n");
 	exit(1);
     }
     int xres,yres,bpp,line_len;
     xres = vinfo.xres;  yres = vinfo.yres;  bpp = vinfo.bits_per_pixel; 
     line_len = finfo.line_length;
 printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,line_len);
-    screensize = xres * yres * bpp;
+    screensize = xres * yres * bpp/8;
 
     /*memory I/O */
     char *fbptr;
 
-    fbptr = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE, MAP,fd,0);
+    fbptr = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
     if((int)fbptr == -1){
-	printf(stderr,"cannot get framebuffer\n");
+	fprintf(stderr,"cannot get framebuffer\n");
 	exit(1);
     }
     
+printf("the first pointer is %d,and the first char is %d\n",fbptr,*fbptr);
+printf("the 100th pointer is %d,and the 100th char is %d\n",fbptr+100,*(fbptr+100));
 printf("the frame buffer device was mapped\n");
     munmap(fbptr,screensize);
     close(fd);
