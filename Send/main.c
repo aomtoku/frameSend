@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 /* include file for socket communication */
 #include <sys/socket.h>
@@ -12,12 +13,19 @@
 #include <netdb.h>
 
 /* include file for FrameBuffer */
+#include <sys/ioctl.h>
 #include <linux/fb.h>
 #include <linux/fs.h>
 #include <sys/mman.h>
 
 /* define the Parameter */
 #define DEVICE_NAME "/dev/fb0"
+
+struct packet{
+    int xres_screen;
+    int yres_screen;
+    unsigned int color;
+};
 
 int main(int argc, char **argv){
 
@@ -32,7 +40,6 @@ int main(int argc, char **argv){
     int s;
     struct hostent *host;
     struct sockaddr_in me;
-    char buf[512];
     host = gethostbyname(argv[1]);
     s = socket(AF_INET, SOCK_DGRAM,0);
     
@@ -84,18 +91,25 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
     }
     
 printf("the frame buffer device was mapped\n");
+    struct packet packet_udp;
     
     for(y=0;y<yres;y++){
 	for(x=0;x<xres;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
 	    //printf("pointer %p,and the value is %x\n",(unsigned int *)(fbptr+location),*(unsigned int *)(fbptr+location));
-	    sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
+	    packet_udp.xres_screen = x; 
+	    packet_udp.yres_screen = y; 
+	    packet_udp.color = *(unsigned int *)(fbptr+location); 
+//printf("x:%d x:%d, y:%d y:%d\n",x,packet_udp.xres_screen,y,packet_udp.yres_screen);
+	    //sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
+	    sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me,sizeof(me));
 	}
     }
 
     /* sending a packet on UDP */
     //sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
 
+printf("%d at %s\n",__LINE__,__FILE__);
     munmap(fbptr,screensize);
     /* close the filediscriptor of socket */
     close(s);
