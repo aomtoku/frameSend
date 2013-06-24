@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 /* include file for socket communication */
 #include <sys/types.h>
@@ -28,7 +29,11 @@ int main(int argc, char **argv)
     /* open network socket for UDP */
      int sock;
      struct sockaddr_in addr;
+     struct sockaddr_in recv;
      int port = atoi(argv[1]);
+     socklen_t sin_size;
+
+     sin_size = sizeof(struct sockaddr_in);
 
      sock = socket(AF_INET, SOCK_DGRAM, 0);
      
@@ -49,11 +54,11 @@ int main(int argc, char **argv)
      struct fb_var_screeninfo vinfo;
      struct fb_fix_screeninfo finfo;
 
-     if(ioctl(fd,FBIGET_FSCREENINFO, &finfo)){
+     if(ioctl(fd,FBIOGET_FSCREENINFO, &finfo)){
 	 fprintf(stderr, "cannot open fix info\n");
 	 exit(1);
      }
-     if(ioctl(fd,FBIGET_VSCREENINFO, &vinfo)){
+     if(ioctl(fd,FBIOGET_VSCREENINFO, &vinfo)){
 	 fprintf(stderr, "cannot open variable info\n");
 	 exit(1);
      }
@@ -67,17 +72,23 @@ int main(int argc, char **argv)
      /* Handler if socket get a packet, it will be mapped on memory */ 
      char *buf;
      long int location = 0;
+     location = ((x + vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)*line_len;
 
-     memset(buf, 0, sizeof(buf));
+     memset(buf, 0, sizeof(char *));
 
      buf = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE,MAP_SHARED,sock,0);
      if((int)buf == -1){
 	 fprintf(stderr, "cannot get framebuffer");
+	 exit(1);
+     }
 
-     recvfrom(sock, *(unsigned int)(buf+location), sizeof(unsigned int), 0,&addr, );
-     
-     printf("%s\n", buf);
-     
+     while(1){
+	 location = ((x + vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)*line_len;
+	 recvfrom(sock, (unsigned int *)(buf+location), sizeof(unsigned int), 0,(struct sockaddr *)&recv, &sin_size);
+	 printf("%s\n", buf);
+     }
+
+     close(fd);
      close(sock);
      
      return 0;
