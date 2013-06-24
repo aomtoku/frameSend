@@ -1,4 +1,3 @@
-
 /* incldue file for Standard Linbrary for C */
 #include <stdio.h>
 #include <string.h>
@@ -59,6 +58,11 @@ int main(int argc, char **argv)
 	 exit(1);
      }
      
+     int xres,yres,bpp,line_len;
+     xres = vinfo.xres; yres = vinfo.yres; bpp = vinfo.bits_per_pixel;
+     line_len = finfo.line_length;
+
+     screensize = xres * yres * bpp / 8;
 
      /* Handler if socket get a packet, it will be mapped on memory */ 
      char *buf;
