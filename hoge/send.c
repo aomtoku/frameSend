@@ -12,7 +12,7 @@ main()
 
         addr.sin_family = AF_INET;
 	 addr.sin_port = htons(12345);
-	  addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	  addr.sin_addr.s_addr = inet_addr("203.178.143.212");
 
 	   sendto(sock, "HELLO", 5, 0, (struct sockaddr *)&addr, sizeof(addr));
 
