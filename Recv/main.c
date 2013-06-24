@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 /* include file for socket communication */
 #include <sys/types.h>
@@ -13,9 +14,16 @@
 #include <linux/fb.h>
 #include <linux/fs.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 
 /* define the Parameter */
 #define DEVICE_NAME "/dev/fb0"
+
+struct packet{
+    int xres_screen;
+    int yres_screen;
+    unsigned int color;
+};
 
 
 int main(int argc, char **argv)
@@ -72,21 +80,35 @@ int main(int argc, char **argv)
      /* Handler if socket get a packet, it will be mapped on memory */ 
      char *buf;
      long int location = 0;
-     location = ((x + vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)*line_len;
+     //int x=0;int y=0;
 
-     memset(buf, 0, sizeof(char *));
+     //memset(buf, 0, sizeof(char *));
+     struct packet rec_packet;
 
-     buf = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE,MAP_SHARED,sock,0);
+     buf = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
      if((int)buf == -1){
 	 fprintf(stderr, "cannot get framebuffer");
 	 exit(1);
      }
-
      while(1){
-	 location = ((x + vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)*line_len;
-	 recvfrom(sock, (unsigned int *)(buf+location), sizeof(unsigned int), 0,(struct sockaddr *)&recv, &sin_size);
-	 printf("%s\n", buf);
+	 //location = ((x + vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)*line_len;
+	 //recvfrom(sock, (unsigned int *)(buf+location), sizeof(unsigned int *), 0,(struct sockaddr *)&recv, &sin_size);
+	 recvfrom(sock, &rec_packet, sizeof(struct packet), 0,(struct sockaddr *)&recv, &sin_size);
+//printf("x:%d, y:%d, color:%x\n",rec_packet.xres_screen, rec_packet.yres_screen, rec_packet.color);
+	 location = ((rec_packet.xres_screen + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
+	 *(unsigned int *)(buf+location) = rec_packet.color;
+	 //printf("the value: %x\n",*(unsigned int *)(buf+location));
+	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
+	 //printf("%x\n", *(buf+location));
+	 /*if(x == xres) {
+	     x = 0;
+	     if(y==yres){
+	     y = 0;
+	     } else y ++;
+	 } else x++;*/
      }
+
+     munmap(buf,screensize);
 
      close(fd);
      close(sock);
