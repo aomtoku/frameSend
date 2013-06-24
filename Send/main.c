@@ -21,6 +21,9 @@
 /* define the Parameter */
 #define DEVICE_NAME "/dev/fb0"
 
+#define VGA_X 640
+#define VGA_Y 480
+
 struct packet{
     int xres_screen;
     int yres_screen;
@@ -93,13 +96,14 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 printf("the frame buffer device was mapped\n");
     struct packet packet_udp;
     
-    for(y=0;y<yres;y++){
-	for(x=0;x<xres;x++){
+    for(y=0;y<VGA_Y;y++){
+	for(x=0;x<VGA_X;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
 	    //printf("pointer %p,and the value is %x\n",(unsigned int *)(fbptr+location),*(unsigned int *)(fbptr+location));
 	    packet_udp.xres_screen = x; 
 	    packet_udp.yres_screen = y; 
-	    packet_udp.color = *(unsigned int *)(fbptr+location); 
+	    //packet_udp.color = *(unsigned int *)(fbptr+location); 
+	    packet_udp.color = 16711680;
 //printf("x:%d x:%d, y:%d y:%d\n",x,packet_udp.xres_screen,y,packet_udp.yres_screen);
 	    //sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
 	    sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me,sizeof(me));

@@ -76,7 +76,7 @@ int main(int argc, char **argv)
      line_len = finfo.line_length;
 
      screensize = xres * yres * bpp / 8;
-
+printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,line_len);
      /* Handler if socket get a packet, it will be mapped on memory */ 
      char *buf;
      long int location = 0;
