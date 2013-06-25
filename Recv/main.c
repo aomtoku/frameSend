@@ -97,11 +97,15 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 //printf("x:%d, y:%d, color:%x\n",rec_packet.xres_screen, rec_packet.yres_screen, rec_packet.color);
 	 location = ((rec_packet.xres_screen + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
 	 
-	 //*(unsigned int *)(buf+location) = rec_packet.color;
-	 *(char *)(buf+location) = rec_packet.color;
+	 //printf("%s\n",rec_packet.color);
+
+	 memcpy(&rec_packet.color, (buf+location),1280);
+	 //*(unsigned int *)(buf+location) = (unsigned int)rec_packet.color;
+	 //*(char *)(buf+location) = rec_packet.color;
+	 //printf("%d : %s\n",rec_packet.color);
 	 
-	 //msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
-	 msync((buf+location),(sizeof(char *))*1280,MS_ASYNC);
+	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
+	 //msync((buf+location),(sizeof(char *))*1280,MS_ASYNC);
 	 //printf("%x\n", *(buf+location));
      }
 
@@ -112,4 +116,7 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
      
      return 0;
 }
+
+
+
 

@@ -89,7 +89,7 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
     int y = 0;
     int cnt = 0;
     char *buf;
-    buf = (char *)malloc((sizeof(char *))*4*300);
+    buf = (char *)malloc(1280);
     
     if(buf == NULL){
 	fprintf(stderr,"fails to allocate memory\n");
@@ -106,7 +106,7 @@ printf("the frame buffer device was mapped\n");
     struct packet packet_udp;
     packet_udp.xres_screen = x; 
     packet_udp.yres_screen = y; 
-    while(1){
+    //while(1){
     for(y=0;y<VGA_Y;y++){
 	for(x=0;x<VGA_X;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
@@ -115,10 +115,12 @@ printf("the frame buffer device was mapped\n");
 	    //packet_udp.yres_screen = y; 
 	    //packet_udp->color = *(unsigned int *)(fbptr+location);
 	    if(cnt == 319){
-		memcpy((char *)(fbptr+location),(char *)(buf+(cnt*4)),4);
+		memcpy((char *)(fbptr+location),(buf+(cnt*4)),4);
 
-		memcpy(buf,packet_udp.color,1280);
-		sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me,sizeof(me));
+		memcpy(buf, &packet_udp.color, 1280);
+		//printf("%s\n",packet_udp.color);
+		sendto(s, &packet_udp, 1284, 0, (struct sockaddr *)&me,sizeof(me));
+		//printf("packet size : %d\n",sizeof(struct packet));
 		if(x == 639) {
 		    packet_udp.xres_screen = 321;
 		    packet_udp.yres_screen = y;
@@ -129,7 +131,7 @@ printf("the frame buffer device was mapped\n");
 		//packet_udp->color = *(unsigned int *)(fbptr+location);
 		cnt = 0;
 	    } else {
-		memcpy((char *)(fbptr+location),(char *)(buf+(cnt*4)),4);
+		memcpy((char *)(fbptr+location),(buf+(cnt*4)),4);
 		//(buf + (cnt*4)) = (char *)(fbptr+location); 
 		cnt++;
 	    }
@@ -140,6 +142,17 @@ printf("the frame buffer device was mapped\n");
 	    //sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me,sizeof(me));
 	}
     }
+    //}
+    int j=0;
+    while(1){
+	int t;
+	for(t=1;t<7;t++){
+	    buf = buf + j;
+	    printf("buf[%d]: %d  ",j,*(fbptr+j));
+	    j++;
+	}
+	printf("\n");
+	j++;
     }
 
     /* sending a packet on UDP */
