@@ -20,9 +20,9 @@
 #define DEVICE_NAME "/dev/fb0"
 
 struct packet{
-    int xres_screen;
-    int yres_screen;
-    unsigned int color;
+    short int xres_screen;
+    short int yres_screen;
+    char *color;
 };
 
 
@@ -96,16 +96,13 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 	 recvfrom(sock, &rec_packet, sizeof(struct packet), 0,(struct sockaddr *)&recv, &sin_size);
 //printf("x:%d, y:%d, color:%x\n",rec_packet.xres_screen, rec_packet.yres_screen, rec_packet.color);
 	 location = ((rec_packet.xres_screen + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
-	 *(unsigned int *)(buf+location) = rec_packet.color;
-	 //printf("the value: %x\n",*(unsigned int *)(buf+location));
-	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
+	 
+	 //*(unsigned int *)(buf+location) = rec_packet.color;
+	 *(char *)(buf+location) = rec_packet.color;
+	 
+	 //msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
+	 msync((buf+location),(sizeof(char *))*1280,MS_ASYNC);
 	 //printf("%x\n", *(buf+location));
-	 /*if(x == xres) {
-	     x = 0;
-	     if(y==yres){
-	     y = 0;
-	     } else y ++;
-	 } else x++;*/
      }
 
      munmap(buf,screensize);
