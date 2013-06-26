@@ -22,7 +22,7 @@
 struct packet{
     short int xres_screen;
     short int yres_screen;
-    char *color;
+    char color[1280];
 };
 
 
@@ -97,12 +97,31 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 //printf("x:%d, y:%d, color:%x\n",rec_packet.xres_screen, rec_packet.yres_screen, rec_packet.color);
 	 location = ((rec_packet.xres_screen + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
 	 
+	 //printf("xres = %d,yres = %d \n" , rec_packet.xres_screen,rec_packet.yres_screen);
 	 //printf("%s\n",rec_packet.color);
-
-	 memcpy(&rec_packet.color, (buf+location),1280);
+printf("%d at %s\n",__LINE__,__FILE__);
+	 //memcpy( buf+location ,&rec_packet.color,1280);
+printf("%d at %s\n",__LINE__,__FILE__);
 	 //*(unsigned int *)(buf+location) = (unsigned int)rec_packet.color;
 	 //*(char *)(buf+location) = rec_packet.color;
 	 //printf("%d : %s\n",rec_packet.color);
+	 char *color;
+	 color = (char *)malloc(1280);
+	 color = rec_packet.color;
+	 int j;
+	 for(j=0;j<320;j++){
+	     int val;
+	     if(rec_packet.xres_screen == 320) val = j + 320;
+	     else val = j;
+	     location = ((rec_packet.xres_screen+val + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
+printf("%d at %s\n",__LINE__,__FILE__);
+
+	     //*(unsigned int *)(buf+location) = rec_packet.color;
+	     //msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
+	     memcpy(buf+location,color+(j*4),4);
+printf("%d at %s\n",__LINE__,__FILE__);
+	     printf("%d location = %ld ptr:%x : %#x color:%#x\n",j,location, buf+location,*(buf+location),rec_packet.color);
+	 }
 	 
 	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
 	 //msync((buf+location),(sizeof(char *))*1280,MS_ASYNC);
@@ -113,10 +132,8 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 
      close(fd);
      close(sock);
+
+     printf("success\n");
      
      return 0;
 }
-
-
-
-
