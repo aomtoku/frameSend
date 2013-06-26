@@ -29,7 +29,7 @@ struct packet{
     short int xres_screen;
     short int yres_screen;
     //unsigned int color;
-    char color[1280];
+    char color[320];
 };
 
 int main(int argc, char **argv){
@@ -127,7 +127,9 @@ printf("the frame buffer device was mapped\n");
 	    if(cnt == 319){
 #ifdef RED
 	    //packet_udp.color = 2145386496;
-		memcpy(packet_udp.color+(cnt*4), num, 4);
+		memcpy(packet_udp.color+cnt, num, 4);
+		//printf("pckt: %#x %#x %#x %#x\n",*(packet_udp.color+cnt),*(packet_udp.color+cnt+1),*(packet_udp.color+cnt+2),*(packet_udp.color+cnt+3));
+		//printf("pckt: %#x %#x %#x %#x \n",packet_udp.color+(cnt*4),packet_udp.color+(cnt*4)+1,packet_udp.color+(cnt*4)+2,packet_udp.color+(cnt*4)+3);
 #else
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		memcpy((char *)(buf+(cnt*4)), (char *)(fbptr+location), 4);
@@ -137,22 +139,26 @@ printf("the frame buffer device was mapped\n");
 		//memcpy(&packet_udp.color, buf, 1280);
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//printf("%s\n",packet_udp.color);
-		sendto(s, &packet_udp, 1284, 0, (struct sockaddr *)&me,sizeof(me));
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//printf("packet size : %d\n",sizeof(struct packet));
 		if(x == 639) {
+		    printf("x:%d \n",x);
 		    packet_udp.xres_screen = 320;
 		    packet_udp.yres_screen = y;
 		} else {
+		    printf("x:%d \n", x);
 		    packet_udp.xres_screen = 0; 
 		    packet_udp.yres_screen = y;
 		}
+		printf("%d %d ",packet_udp.xres_screen,packet_udp.yres_screen);
+		sendto(s, &packet_udp, 324, 0, (struct sockaddr *)&me,sizeof(me));
+		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//packet_udp->color = *(unsigned int *)(fbptr+location);
-		int j;
-		for(j=0;j<80;j++){
+		//int j;
+		/*for(j=0;j<80;j++){
 		    printf("%d %d %d %#x : %x %x %x %x\n",j,ycnt,cnt, &packet_udp.color,  packet_udp.color ,packet_udp.color +(j*4)+1,packet_udp.color+(j*4)+2,packet_udp.color+(j*4)+3);
-		}
+		}*/
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 
 		cnt = 0;
@@ -166,7 +172,9 @@ printf("the frame buffer device was mapped\n");
 //printf("cnt : %d BUF ptr = %p,value =  %x",cnt,buf+(cnt*4),*(buf+(cnt*4)));
 //printf(" SRC pntr = %p,value = %x\n",fbptr+location,*(fbptr+location));
 #ifdef RED
-		memcpy(packet_udp.color+(cnt*4), num, 4);
+		//*(unsigned int *)(packet_udp.color+cnt) = *num;
+		memcpy(packet_udp.color+cnt, num,sizeof(unsigned int *) );
+		//printf("cnt : %d pckt:%#x %#x num %#x: %#x\n",cnt,packet_udp.color+cnt,*(unsigned int *)(packet_udp.color+cnt),num,*num);
 #else
 		memcpy(buf+(cnt*4), fbptr+location, 4);
 #endif		
