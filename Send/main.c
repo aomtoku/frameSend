@@ -107,7 +107,7 @@ printf("the frame buffer device was mapped\n");
     packet_udp.yres_screen = y; 
     int ycnt=0;
     int send;
-#ifdef RED
+#ifdef DEBUG_RED_DESP
     unsigned int *num;
     num = (unsigned int  *)malloc(sizeof(unsigned int *));
     *num = RED_DIC;
