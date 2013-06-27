@@ -23,13 +23,16 @@
 #define VGA_X 640
 #define VGA_Y 480
 
-#define RED
+#define DATA_SIZE 1280
+#define BIT 8
+#define RED_DEC 2145386496
+
+#define DEBUG_RED_DISP
 
 struct packet{
     short int xres_screen;
     short int yres_screen;
-    //unsigned int color;
-    unsigned char color[1280];
+    unsigned char color[DATA_SIZE];
 };
 
 int main(int argc, char **argv){
@@ -81,8 +84,10 @@ int main(int argc, char **argv){
     int xres,yres,bpp,line_len;
     xres = vinfo.xres;  yres = vinfo.yres;  bpp = vinfo.bits_per_pixel; 
     line_len = finfo.line_length;
-printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,line_len);
-    screensize = xres * yres * bpp/8;
+    
+    /* Check your machine's resolusion and pixel line length(bytes) */
+    printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,line_len);
+    screensize = xres * yres * bpp/BIT;
 
     /*memory I/O */
     char *fbptr;
@@ -90,151 +95,61 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
     int x = 0;
     int y = 0;
     int cnt = 0;
-     //buffer_?
-    //char buf[1280];
-    //buf = (char *)malloc(1280);
-    /*
-    if(buf == NULL){
-	fprintf(stderr,"fails to allocate memory\n");
-	exit(1);
-    }*/
 
     fbptr = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
     if((int)fbptr == -1){
 	fprintf(stderr,"cannot get framebuffer\n");
 	exit(1);
     }
-    //printf("BUF: ptr %#x",buf);
 printf("the frame buffer device was mapped\n");
     struct packet packet_udp;
-    //packet_udp.color = (char *)malloc(1280);
     packet_udp.xres_screen = x; 
     packet_udp.yres_screen = y; 
     int ycnt=0;
+    int send;
 #ifdef RED
     unsigned int *num;
-    num = (unsigned int  *)malloc(4);
-    *num = 2145386496;
-    int u = 0;
-    int send;
+    num = (unsigned int  *)malloc(sizeof(unsigned int *));
+    *num = RED_DIC;
 #endif 
     //while(1){
     for(y=0;y<VGA_Y;y++){
 	for(x=0;x<VGA_X;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
-	    //printf("pointer %p,and the value is %x\n",(unsigned int *)(fbptr+location),*(unsigned int *)(fbptr+location));
-	    //packet_udp.xres_screen = x; 
-	    //packet_udp.yres_screen = y; 
-	    //packet_udp->color = *(unsigned int *)(fbptr+location);
-//printf("buf addr : %p : %x\n",buf,*buf);
 	    if(cnt == 319){
-#ifdef RED
-	    //packet_udp.color = 2145386496;
+#ifdef DEBUF_RED_DESP
 		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
-		//memcpy(packet_udp.color+cnt, num, 4);
-		//printf("pckt: %#x %#x %#x %#x\n",*(packet_udp.color+cnt),*(packet_udp.color+cnt+1),*(packet_udp.color+cnt+2),*(packet_udp.color+cnt+3));
-		//printf("pckt: %#x %#x %#x %#x \n",packet_udp.color+(cnt*4),packet_udp.color+(cnt*4)+1,packet_udp.color+(cnt*4)+2,packet_udp.color+(cnt*4)+3);
 #else
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		memcpy((char *)(buf+(cnt*4)), (char *)(fbptr+location), 4);
+		memcpy(packet_udp.color+(cnt*4), (char *)(fbptr+location), sizeof(unsigned int *));
 #endif
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		//packet_udp.color = *buf;
-		//memcpy(&packet_udp.color, buf, 1280);
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		//printf("%s\n",packet_udp.color);
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		//printf("packet size : %d\n",sizeof(struct packet));
-		if(x == 639) {
-		    //printf("x:%d \n",x);
-		    packet_udp.xres_screen = 320;
+		if(x == VGA_X - 1) {
+		    packet_udp.xres_screen = VGA_X/2;
 		    packet_udp.yres_screen = y;
 		} else {
-		   // printf("x:%d \n", x);
 		    packet_udp.xres_screen = 0; 
 		    packet_udp.yres_screen = y;
 		}
-		//printf("%d %d ",packet_udp.xres_screen,packet_udp.yres_screen);
-		send = sendto(s, &packet_udp, 1284, 0, (struct sockaddr *)&me,sizeof(me));
+		send = sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me, sizeof(me));
 		if(send < 0){
 		    fprintf(stderr,"cannot send a packet \n");
 		    exit(1);
 		}
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		//packet_udp->color = *(unsigned int *)(fbptr+location);
-		//int j;
-		/*for(j=0;j<80;j++){
-		    printf("%d %d %d %#x : %x %x %x %x\n",j,ycnt,cnt, &packet_udp.color,  packet_udp.color ,packet_udp.color +(j*4)+1,packet_udp.color+(j*4)+2,packet_udp.color+(j*4)+3);
-		}*/
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 
 		cnt = 0;
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		/*if(buf != NULL){
-		    free(buf);
-		    buf = NULL;
-                    buf = (char *)malloc(1280);
-		}else printf ("error\n");*/
 	    } else {
-//printf("cnt : %d BUF ptr = %p,value =  %x",cnt,buf+(cnt*4),*(buf+(cnt*4)));
-//printf(" SRC pntr = %p,value = %x\n",fbptr+location,*(fbptr+location));
-#ifdef RED
-		//*(unsigned int *)(packet_udp.color+cnt) = *num;
-		
-		/*if(u==1){
-		    *num = 0x003FFC00;
-		    u=0;
-		} else{
-		    *num = 0x7FE00000;
-		    u=1;
-		}*/
-
-		//memcpy(packet_udp.color+cnt, num,sizeof(unsigned int *) );
-
-//printf("%d at %s\n",__LINE__,__FILE__);
+#ifdef DEBUG_RED_DESP
 		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
-//printf("%d at %s\n",__LINE__,__FILE__);
-		//printf("%d cnt : %d pckt:%#x %#x %#x %#x num %#x: %#x\n",sizeof(unsigned int*),cnt,packet_udp.color+cnt,*(unsigned int *)(packet_udp.color+cnt),&packet_udp.color+cnt,*(unsigned int *)(&packet_udp.color+(cnt*4)),num,*num);
-		//printf("cnt : %d pointTo=%#x val=%#x PointFrom=%#x Val=%#x num %#x: %#x\n",cnt,packet_udp.color+(cnt*4),*(unsigned int *)(packet_udp.color+(cnt*4)),packet_udp.color+cnt,packet_udp.color[cnt],num,*num);
-		//printf("%x\n",packet_udp.color);
 #else
-		memcpy(buf+(cnt*4), fbptr+location, 4);
+		memcpy(packet_udp.color+(cnt*4), fbptr+location, sizeof(unsigned int *));
 #endif		
-		
-		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
-		//(buf + (cnt*4)) = (char *)(fbptr+location);
 		cnt++;
 	    }
-
-	    //packet_udp.color = 2145386496;
-//printf("x:%d x:%d, y:%d y:%d\n",x,packet_udp.xres_screen,y,packet_udp.yres_screen);
-	    //sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
-	    //sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me,sizeof(me));
 	}
 	ycnt++;
     }
-    //}
-    /*
-    int j=0;
-    while(1){
-	int t;
-	printf("%p:",fbptr+j);
-	for(t=0;t<sizeof(fbptr);t++){
-	    buf = buf + j;
-	    printf("%02x  ",*(fbptr+j));
-	    j++;
-	}
-	printf("\n");
-	j++;
-    }*/
 
-    /* sending a packet on UDP */
-    //sendto(s, (unsigned int *)(fbptr+location), sizeof(unsigned int *), 0, (struct sockaddr *)&me,sizeof(me));
-    printf("num ptr : %#x %x\n",num,*num);
-
-printf("%d at %s\n",__LINE__,__FILE__);
     munmap(fbptr,screensize);
+    
     /* close the filediscriptor of socket */
     close(s);
     close(fd);
