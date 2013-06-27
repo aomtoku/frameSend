@@ -22,7 +22,7 @@
 struct packet{
     short int xres_screen;
     short int yres_screen;
-    char *color;
+    char color[1280];
 };
 
 
@@ -84,26 +84,37 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 
      //memset(buf, 0, sizeof(char *));
      struct packet rec_packet;
-     rec_packet.color = (char *)malloc(320);
+     //rec_packet.color = (char *)malloc(1280);
 
      buf = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
      if((int)buf == -1){
 	 fprintf(stderr, "cannot get framebuffer");
 	 exit(1);
      }
+     int rec;
      while(1){
 	 //location = ((x + vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)*line_len;
 	 //recvfrom(sock, (unsigned int *)(buf+location), sizeof(unsigned int *), 0,(struct sockaddr *)&recv, &sin_size);
 	 //recvfrom(sock, &rec_packet, sizeof(struct packet), 0,(struct sockaddr *)&recv, &sin_size);
-	 recvfrom(sock, &rec_packet, sizeof(324), 0,(struct sockaddr *)&recv, &sin_size);
-//printf("x:%d, y:%d, color:%x\n",rec_packet.xres_screen, rec_packet.yres_screen, rec_packet.color);
+	 rec = recvfrom(sock, &rec_packet, 1284, 0,(struct sockaddr *)&recv, &sin_size);
+	 if(rec < 0){
+	     fprintf(stderr, "cannot receive a packet \n");
+	     exit(1);
+	 }
+//printf("x:%d, y:%d, color:%x\n",rec_packet.xres_screen, rec_packet.yres_screen, *rec_packet.color);
 	 location = ((rec_packet.xres_screen + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
-	 
+	 /*int t;
+	 t=0;
+	 for(t=0;t<320;t++){
+
+	     printf("ptr=%p *val=%#x &val=%#x \n",rec_packet.color,*(rec_packet.color + t), &rec_packet.color);
+	     //printf("%d ptr=%#x val=%#x\n",t,rec_packet.color + t, *(rec_packet.color+t));
+	     //printf("%#x %#x \n",rec_packet.color, *(unsigned int *)(rec_packet.color+(t*4)));
+	     //printf("%#x %#x \n",*(&rec_packet.color), *(rec_packet.color+t));
+	 }*/
 	 //printf("xres = %d,yres = %d \n" , rec_packet.xres_screen,rec_packet.yres_screen);
 	 //printf("%s\n",rec_packet.color);
-printf("%d at %s\n",__LINE__,__FILE__);
 	 //memcpy( buf+location ,&rec_packet.color,1280);
-printf("%d at %s\n",__LINE__,__FILE__);
 	 //*(unsigned int *)(buf+location) = (unsigned int)rec_packet.color;
 	 //*(char *)(buf+location) = rec_packet.color;
 	 /*char *color;
@@ -117,16 +128,19 @@ printf("%d at %s\n",__LINE__,__FILE__);
 		 val = j;
 	     } else val = j;
 	     location = ((rec_packet.xres_screen+val + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
-printf("%d at %s\n",__LINE__,__FILE__);
+//printf("%d at %s\n",__LINE__,__FILE__);
 
-	     //*(unsigned int *)(buf+location) = rec_packet.color;
+//printf("%d at %s\n",__LINE__,__FILE__);
+
+	     //*(unsigned int *)(buf+location) = rec_packet.color
 	     //msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
-	     memcpy(buf+location,&rec_packet.color+j,sizeof(unsigned int));
-printf("%d at %s\n",__LINE__,__FILE__);
-             printf("x:%d y:%d x:%d y:%d %x %x\n",rec_packet.xres_screen,rec_packet.yres_screen,rec_packet.xres_screen+val,rec_packet.yres_screen,&rec_packet.color+j,*(&rec_packet.color+j));
-	     printf("%d location = %ld ptr:%#x : %#x color:%#x\n",j,location, buf+location,*(unsigned int *)(buf+location),*(unsigned int *)(&rec_packet.color+j));
+	     memcpy(buf+location,(unsigned int *)(rec_packet.color+(j*4)),sizeof(unsigned int *));
+//printf("%d at %s\n",__LINE__,__FILE__);
+//printf("%d at %s\n",__LINE__,__FILE__);
+             //printf("ptr:%p &val:%#x *val=%#x\n",(rec_packet.color+(j*4)),*(unsigned int *)(rec_packet.color+(j*4)),(rec_packet.color+(j*4)));
+             //printf("ptr:%#x val:%#x\n",(unsigned int *)(rec_packet.color+(j*4)),*(unsigned int *)(&rec_packet.color+(j*4)));
+	     //printf("%d location = %ld ptr:%#x : %#x color:%#x\n",j,location, buf+location,*(unsigned int *)(buf+location),*(unsigned int *)(rec_packet.color+(j*4)));
 	 }
-	 
 	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
 	 //msync((buf+location),(sizeof(char *))*1280,MS_ASYNC);
 	 //printf("%x\n", *(buf+location));

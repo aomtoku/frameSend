@@ -29,7 +29,7 @@ struct packet{
     short int xres_screen;
     short int yres_screen;
     //unsigned int color;
-    char color[320];
+    unsigned char color[1280];
 };
 
 int main(int argc, char **argv){
@@ -90,10 +90,10 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
     int x = 0;
     int y = 0;
     int cnt = 0;
-    /* //buffer_?
-    char *buf;
-    buf = (char *)malloc(1280);
-    
+     //buffer_?
+    //char buf[1280];
+    //buf = (char *)malloc(1280);
+    /*
     if(buf == NULL){
 	fprintf(stderr,"fails to allocate memory\n");
 	exit(1);
@@ -107,6 +107,7 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
     //printf("BUF: ptr %#x",buf);
 printf("the frame buffer device was mapped\n");
     struct packet packet_udp;
+    //packet_udp.color = (char *)malloc(1280);
     packet_udp.xres_screen = x; 
     packet_udp.yres_screen = y; 
     int ycnt=0;
@@ -114,6 +115,8 @@ printf("the frame buffer device was mapped\n");
     unsigned int *num;
     num = (unsigned int  *)malloc(4);
     *num = 2145386496;
+    int u = 0;
+    int send;
 #endif 
     //while(1){
     for(y=0;y<VGA_Y;y++){
@@ -127,7 +130,8 @@ printf("the frame buffer device was mapped\n");
 	    if(cnt == 319){
 #ifdef RED
 	    //packet_udp.color = 2145386496;
-		memcpy(packet_udp.color+cnt, num, 4);
+		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
+		//memcpy(packet_udp.color+cnt, num, 4);
 		//printf("pckt: %#x %#x %#x %#x\n",*(packet_udp.color+cnt),*(packet_udp.color+cnt+1),*(packet_udp.color+cnt+2),*(packet_udp.color+cnt+3));
 		//printf("pckt: %#x %#x %#x %#x \n",packet_udp.color+(cnt*4),packet_udp.color+(cnt*4)+1,packet_udp.color+(cnt*4)+2,packet_udp.color+(cnt*4)+3);
 #else
@@ -142,16 +146,20 @@ printf("the frame buffer device was mapped\n");
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//printf("packet size : %d\n",sizeof(struct packet));
 		if(x == 639) {
-		    printf("x:%d \n",x);
+		    //printf("x:%d \n",x);
 		    packet_udp.xres_screen = 320;
 		    packet_udp.yres_screen = y;
 		} else {
-		    printf("x:%d \n", x);
+		   // printf("x:%d \n", x);
 		    packet_udp.xres_screen = 0; 
 		    packet_udp.yres_screen = y;
 		}
-		printf("%d %d ",packet_udp.xres_screen,packet_udp.yres_screen);
-		sendto(s, &packet_udp, 324, 0, (struct sockaddr *)&me,sizeof(me));
+		//printf("%d %d ",packet_udp.xres_screen,packet_udp.yres_screen);
+		send = sendto(s, &packet_udp, 1284, 0, (struct sockaddr *)&me,sizeof(me));
+		if(send < 0){
+		    fprintf(stderr,"cannot send a packet \n");
+		    exit(1);
+		}
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//printf("buf: %#x %d\n",buf+(cnt*4) ,(int)(buf+(cnt*4) - buf));
 		//packet_udp->color = *(unsigned int *)(fbptr+location);
@@ -173,8 +181,23 @@ printf("the frame buffer device was mapped\n");
 //printf(" SRC pntr = %p,value = %x\n",fbptr+location,*(fbptr+location));
 #ifdef RED
 		//*(unsigned int *)(packet_udp.color+cnt) = *num;
-		memcpy(packet_udp.color+cnt, num,sizeof(unsigned int *) );
-		//printf("cnt : %d pckt:%#x %#x num %#x: %#x\n",cnt,packet_udp.color+cnt,*(unsigned int *)(packet_udp.color+cnt),num,*num);
+		
+		/*if(u==1){
+		    *num = 0x003FFC00;
+		    u=0;
+		} else{
+		    *num = 0x7FE00000;
+		    u=1;
+		}*/
+
+		//memcpy(packet_udp.color+cnt, num,sizeof(unsigned int *) );
+
+//printf("%d at %s\n",__LINE__,__FILE__);
+		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
+//printf("%d at %s\n",__LINE__,__FILE__);
+		//printf("%d cnt : %d pckt:%#x %#x %#x %#x num %#x: %#x\n",sizeof(unsigned int*),cnt,packet_udp.color+cnt,*(unsigned int *)(packet_udp.color+cnt),&packet_udp.color+cnt,*(unsigned int *)(&packet_udp.color+(cnt*4)),num,*num);
+		//printf("cnt : %d pointTo=%#x val=%#x PointFrom=%#x Val=%#x num %#x: %#x\n",cnt,packet_udp.color+(cnt*4),*(unsigned int *)(packet_udp.color+(cnt*4)),packet_udp.color+cnt,packet_udp.color[cnt],num,*num);
+		//printf("%x\n",packet_udp.color);
 #else
 		memcpy(buf+(cnt*4), fbptr+location, 4);
 #endif		
