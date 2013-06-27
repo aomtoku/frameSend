@@ -27,13 +27,18 @@
 #define BIT 8
 #define RED_DEC 2145386496
 
-#define DEBUG_RED_DISP
 
+/* Debug Parameter */
+#define DEBUG_RED_DISP
+//#define NODEBUG
+
+/* Struct for Packet DataGrum */
 struct packet{
     short int xres_screen;
     short int yres_screen;
     unsigned char color[DATA_SIZE];
 };
+
 
 int main(int argc, char **argv){
 
@@ -112,12 +117,12 @@ printf("the frame buffer device was mapped\n");
     num = (unsigned int  *)malloc(sizeof(unsigned int *));
     *num = RED_DIC;
 #endif 
-    //while(1){
+    while(1){
     for(y=0;y<VGA_Y;y++){
 	for(x=0;x<VGA_X;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
 	    if(cnt == 319){
-#ifdef DEBUF_RED_DESP
+#ifdef DEBUG_RED_DESP
 		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
 #else
 		memcpy(packet_udp.color+(cnt*4), (char *)(fbptr+location), sizeof(unsigned int *));
@@ -129,7 +134,12 @@ printf("the frame buffer device was mapped\n");
 		    packet_udp.xres_screen = 0; 
 		    packet_udp.yres_screen = y;
 		}
-		send = sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me, sizeof(me));
+		
+		/* Recvfrom gets a packet for UDP with returning error*/
+		do {
+		    send = sendto(s, &packet_udp, sizeof(struct packet), 0, (struct sockaddr *)&me, sizeof(me));
+		} while( send < 0 && (errno == EAGAIN || errno == EWOULDBLOCK ));
+
 		if(send < 0){
 		    fprintf(stderr,"cannot send a packet \n");
 		    exit(1);
@@ -146,6 +156,7 @@ printf("the frame buffer device was mapped\n");
 	    }
 	}
 	ycnt++;
+    }
     }
 
     munmap(fbptr,screensize);
