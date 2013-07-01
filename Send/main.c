@@ -40,20 +40,12 @@ struct packet{
 };
 
 
-int main(int argc, char **argv){
 
-    /*check the augment */
-    if(argc < 3){
-	fprintf(stderr, "usage : ./a.out <hostname> <port>\n");
-	exit(1);
-    }
-
-    /* open network socket */
-    int port = atoi(argv[2]);
+int udpconnect(char *name, int port){
     int s;
     struct hostent *host;
     struct sockaddr_in me;
-    host = gethostbyname(argv[1]);
+    host = gethostbyname(name);
     s = socket(AF_INET, SOCK_DGRAM,0);
     
     bzero((char *)&me,sizeof(me));
@@ -65,6 +57,25 @@ int main(int argc, char **argv){
 	fprintf(stderr, "cannot connect\n");
 	exit(1);
     }
+
+    return s;
+
+}
+
+
+
+int main(int argc, char **argv){
+
+    /*check the augment */
+    if(argc < 3){
+	fprintf(stderr, "usage : ./a.out <hostname> <port>\n");
+	exit(1);
+    }
+
+    /* open network socket */
+    int port = atoi(argv[2]);
+    int s;
+    s = udpconnect(argv[1],port);
 
     /* FrameBuffer */
     int fd, screensize;
