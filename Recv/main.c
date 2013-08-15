@@ -19,7 +19,7 @@
 /* define the Parameter */
 #define DEVICE_NAME "/dev/fb0"
 
-#define DATA_SIZE 1280
+#define DATA_SIZE 1281
 #define BIT 8
 
 
@@ -28,6 +28,7 @@ struct packet{
     short int yres_screen;
     char color[DATA_SIZE];
 };
+
 
 
 int main(int argc, char **argv)
@@ -112,7 +113,7 @@ printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,
 		 val = j;
 	     } else val = j;
 	     location = ((rec_packet.xres_screen+val + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
-	     memcpy(buf+location,(unsigned int *)(rec_packet.color+(j*4)),sizeof(unsigned int *));
+	     memcpy(buf+location,(unsigned int *)(rec_packet.color+(j*3)),sizeof(unsigned int *));
 	 }
 	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
      }
