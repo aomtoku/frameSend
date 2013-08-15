@@ -23,7 +23,7 @@
 #define VGA_X 640
 #define VGA_Y 480
 
-#define DATA_SIZE 1281
+#define DATA_SIZE 1280
 #define BIT 8
 #define RED_DEC 2145386496
 
@@ -98,11 +98,11 @@ void SendPacket(int fd,int s, int bpp, int line_len,struct fb_var_screeninfo vin
     for(y=0;y<VGA_Y;y++){
 	for(x=0;x<VGA_X;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
-	    if(cnt == 426){
+	    if(cnt == 319){
 #ifdef DEBUG_RED_DISP
-		memcpy(packet_udp.color+(cnt*3), num,sizeof(unsigned int *) );
+		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
 #else
-		memcpy(packet_udp.color+(cnt*3), (char *)(fbptr+location), sizeof(unsigned int *));
+		memcpy(packet_udp.color+(cnt*4), (char *)(fbptr+location), sizeof(unsigned int *));
 #endif
 		if(x == VGA_X - 1) {
 		    packet_udp.xres_screen = VGA_X/2;
@@ -125,9 +125,9 @@ void SendPacket(int fd,int s, int bpp, int line_len,struct fb_var_screeninfo vin
 		cnt = 0;
 	    } else {
 #ifdef DEBUG_RED_DISP
-		memcpy(packet_udp.color+(cnt*3), num,sizeof(unsigned int *) );
+		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
 #else
-		memcpy(packet_udp.color+(cnt*3), fbptr+location, sizeof(unsigned int *));
+		memcpy(packet_udp.color+(cnt*4), fbptr+location, sizeof(unsigned int *));
 #endif		
 		cnt++;
 	    }
@@ -138,13 +138,6 @@ void SendPacket(int fd,int s, int bpp, int line_len,struct fb_var_screeninfo vin
 }
 
 
-/**********************::
- * option 
- * usage: sendframe [-f ]
- *
- *
- * *********************/
-
 
 int main(int argc, char **argv){
 
@@ -153,17 +146,6 @@ int main(int argc, char **argv){
 	fprintf(stderr, "usage : ./a.out <hostname> <port>\n");
 	exit(1);
     }
-/*
-    while((ch = getopt(argc, argv, "n:")) != EOF) {
-	switch(ch){
-	    case 'n':
-	    		fafdafa;
-			break;
-	    default :
-	    		break;
-	}
-    }
-*/
 
     /* open network socket */
     int port = atoi(argv[2]);
@@ -200,6 +182,10 @@ int main(int argc, char **argv){
 
     /*memory I/O */
     char *fbptr;
+    /*long int location;
+    int x = 0;
+    int y = 0;
+    int cnt = 0;*/
 
     fbptr = (char *)mmap(0,screensize,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0);
     if((int)fbptr == -1){
@@ -207,7 +193,11 @@ int main(int argc, char **argv){
 	exit(1);
     }
 printf("the frame buffer device was mapped\n");
-
+    /*struct packet packet_udp;
+    packet_udp.xres_screen = x; 
+    packet_udp.yres_screen = y; 
+    int ycnt=0;
+    int snd;*/
 #ifdef DEBUG_RED_DISP
     unsigned int *num;
     num = (unsigned int  *)malloc(sizeof(unsigned int *));
@@ -215,6 +205,49 @@ printf("the frame buffer device was mapped\n");
 #endif
     SendPacket(fd,s,bpp,line_len, vinfo,finfo,fbptr);
     
+    /* 
+    while(1){
+    for(y=0;y<VGA_Y;y++){
+	for(x=0;x<VGA_X;x++){
+	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
+	    if(cnt == 319){
+#ifdef DEBUG_RED_DISP
+		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
+#else
+		memcpy(packet_udp.color+(cnt*4), (char *)(fbptr+location), sizeof(unsigned int *));
+#endif
+		if(x == VGA_X - 1) {
+		    packet_udp.xres_screen = VGA_X/2;
+		    packet_udp.yres_screen = y;
+		} else {
+		    packet_udp.xres_screen = 0; 
+		    packet_udp.yres_screen = y;
+		}
+		*/
+		/* Recvfrom gets a packet for UDP with returning error*/
+		/*do {
+		    snd = send(s, &packet_udp, sizeof(struct packet), 0);
+		} while( send < 0 && (errno == EAGAIN || errno == EWOULDBLOCK ));
+
+		if(send < 0){
+		    fprintf(stderr,"cannot send a packet \n");
+		    exit(1);
+		}
+
+		cnt = 0;
+	    } else {
+#ifdef DEBUG_RED_DISP
+		memcpy(packet_udp.color+(cnt*4), num,sizeof(unsigned int *) );
+#else
+		memcpy(packet_udp.color+(cnt*4), fbptr+location, sizeof(unsigned int *));
+#endif		
+		cnt++;
+	    }
+	}
+	ycnt++;
+    }
+    }
+*/
     munmap(fbptr,screensize);
     
     /* close the filediscriptor of socket */
@@ -223,4 +256,7 @@ printf("the frame buffer device was mapped\n");
 
     return 0;
 }
+
+
+
 
