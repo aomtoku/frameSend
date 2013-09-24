@@ -17,13 +17,16 @@
 #include <linux/fs.h>
 #include <sys/mman.h>
 
+#include "send.h"
+
 /* define the Parameter */
 #define DEVICE_NAME "/dev/fb0"
 
 #define VGA_X 640
 #define VGA_Y 480
 
-#define DATA_SIZE 1281
+#define DATA_SIZE 960
+#define RGB_BYTE 3
 #define BIT 8
 #define RED_DEC 2145386496
 
@@ -32,14 +35,15 @@
 //#define DEBUG_RED_DISP
 #define NODEBUG
 
+/*GLOBAL VARIBLE*/
+int options;
+
 /* Struct for Packet DataGrum */
 struct packet{
     short int xres_screen;
     short int yres_screen;
     unsigned char color[DATA_SIZE];
 };
-
-
 
 int udpconnect(char *name, int port){
     int s;
@@ -58,8 +62,6 @@ int udpconnect(char *name, int port){
 	fprintf(stderr,"getaddrinfo: %s\n", gai_strerror(gai));
 	exit(1);
     }
-
-    s = -1;
 
     for(res=res0; res!=NULL; res=res->ai_next){
 	s = socket(res->ai_family,res->ai_socktype, res->ai_protocol);
@@ -98,11 +100,11 @@ void SendPacket(int fd,int s, int bpp, int line_len,struct fb_var_screeninfo vin
     for(y=0;y<VGA_Y;y++){
 	for(x=0;x<VGA_X;x++){
 	    location = ((x+vinfo.xoffset)*bpp/8) + (y+vinfo.yoffset)* line_len;
-	    if(cnt == 426){
+	    if(cnt == 319){
 #ifdef DEBUG_RED_DISP
-		memcpy(packet_udp.color+(cnt*3), num,sizeof(unsigned int *) );
+		memcpy(packet_udp.color+(cnt*RGB_BYTE), num,sizeof(unsigned int *) );
 #else
-		memcpy(packet_udp.color+(cnt*3), (char *)(fbptr+location), sizeof(unsigned int *));
+		memcpy(packet_udp.color+(cnt*RGB_BYTE), (char *)(fbptr+location), sizeof(unsigned int *));
 #endif
 		if(x == VGA_X - 1) {
 		    packet_udp.xres_screen = VGA_X/2;
@@ -125,9 +127,9 @@ void SendPacket(int fd,int s, int bpp, int line_len,struct fb_var_screeninfo vin
 		cnt = 0;
 	    } else {
 #ifdef DEBUG_RED_DISP
-		memcpy(packet_udp.color+(cnt*3), num,sizeof(unsigned int *) );
+		memcpy(packet_udp.color+(cnt*RGB_BYTE), num,sizeof(unsigned int *) );
 #else
-		memcpy(packet_udp.color+(cnt*3), fbptr+location, sizeof(unsigned int *));
+		memcpy(packet_udp.color+(cnt*RGB_BYTE), fbptr+location, sizeof(unsigned int *));
 #endif		
 		cnt++;
 	    }
@@ -153,18 +155,19 @@ int main(int argc, char **argv){
 	fprintf(stderr, "usage : ./a.out <hostname> <port>\n");
 	exit(1);
     }
-/*
-    while((ch = getopt(argc, argv, "n:")) != EOF) {
+
+    int ch;
+    while((ch = getopt(argc, argv, "dn:")) != EOF) {
 	switch(ch){
 	    case 'n':
-	    		fafdafa;
-			break;
+	    		break;
+	    case 'd':   options |= DEBUG_MODE;
+	    		//printf("option = %02x\n",options);
 	    default :
 	    		break;
 	}
     }
-*/
-
+    
     /* open network socket */
     int port = atoi(argv[2]);
     int s;

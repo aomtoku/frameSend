@@ -5,12 +5,12 @@ CFLAGS = -O -Wall -g
 OBJS = main.o
 INCLUDES = -I/usr/local/include
 TARGET = sendframe
-
+SRC = main.c send.h
 
 all:	$(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $(OBJS)
+	$(CC)  -o $@ $(OBJS)
 
 clean:
 	-rm -f $(TARGET) $(OBJS) 
