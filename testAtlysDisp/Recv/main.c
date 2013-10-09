@@ -28,14 +28,40 @@
 /* DEFINE the Parameter */
 #define DEVICE_NAME "/dev/fb0"
 
-#define DATA_SIZE 960
-#define RGB_BYTE 3
-#define BIT 8
 
+#define BIT 8
+//#define YUVMODE
+#define DATA_YUV
+
+#ifdef DATA_YUV
+
+#define DATA_SIZE 1280
+#define PIXEL_PER_PACKET 640
+#define RGB_BYTE 2
+#define DISPLAY_XRES 1280
+#define DISPLAY_YRES 1440
+
+#else
+
+#define DATA_SIZE 960
+#define PIXEL_PER_PACKET 320
+#define RGB_BYTE 3
+#define DISPLAY_XRES 1280
+#define DISPLAY_YRES 720
+
+
+#endif
+
+/*
+struct packet{
+    unsigned short int yres_screen;
+    unsigned short int xres_screen;
+    unsigned short int color[DATA_SIZE/2];
+};*/
 
 struct packet{
-    short int xres_screen;
-    short int yres_screen;
+    unsigned short int yres_screen;
+    unsigned short int xres_screen;
     unsigned char color[DATA_SIZE];
 };
 
@@ -63,8 +89,6 @@ int OpenFrameBuffer(int fd){
      return fd;
 }
 
-     
-
 /*
 char *InitMemoryMap(char *buf,int screensize,int fd){
      buf = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -76,25 +100,92 @@ char *InitMemoryMap(char *buf,int screensize,int fd){
     return buf;
 }
 */
+#ifdef YUVMODE
+struct RGB{
+    char B;
+    char G;
+    char R;
+};
+
+struct RGB YUV2RGB(struct RGB recRGB,struct RGB dispRGB, int CbCr_flag){
+    unsigned int Y = recRGB.G;
+    unsigned int CB,CR;
+    if(CbCr_flag){
+	 CB = recRGB.R;
+	 CR = dispRGB.R;
+    } else {
+	CR = recRGB.R;
+	CB = dispRGB.R;
+    }
+     
+    struct RGB RGB_YUV;
+    RGB_YUV.R = 1.164 * (Y - 16) + (1.696 * (CR - 128));
+    RGB_YUV.G = 1.164 * (Y - 16) - (0.391 * (CB - 128)) - (0.813 * (CR - 128));
+    RGB_YUV.B = 1.164 * (Y - 16) + (2.018 * (CB - 128));
+
+    return RGB_YUV;
+}
+#endif
+
 void LoopRecvPacket(int sock, struct sockaddr_in recv, char *buf, struct fb_var_screeninfo vinfo, int line_len, int bpp){
      long int location = 0;
      struct packet rec_packet;
      int rec;
      socklen_t sin_size = sizeof(struct sockaddr_in);
+#ifdef YUVMODE
+     int CbCr_flag=1;
+#endif
 
      while(1){
 	 if((rec = recvfrom(sock, &rec_packet, sizeof(struct packet), 0,(struct sockaddr *)&recv, &sin_size)) == -1){
 	     fprintf(stderr, "cannot receive a packet \n");
 	     exit(1);
 	 }
+//printf("X pos = %d, Y = %d\n",rec_packet.xres_screen,rec_packet.yres_screen);
 	 location = ((rec_packet.xres_screen + vinfo.xoffset) * bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
 
-	 int x_pos_cnt;
-	 for(x_pos_cnt=0;x_pos_cnt<320;x_pos_cnt++){
-	     location = ((rec_packet.xres_screen + x_pos_cnt + vinfo.xoffset)*bpp/8) + (rec_packet.yres_screen+vinfo.yoffset)*line_len;
-	     //printf("ptr=%p *val=%#x &val=%#x \n",rec_packet.color,*(rec_packet.color + j), &rec_packet.color);
-	     memcpy(buf+location,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),sizeof(unsigned int *));
-	 }
+	 //if((rec_packet.xres_screen < (DISPLAY_XRES - PIXEL_PER_PACKET)) & (rec_packet.yres_screen < DISPLAY_YRES)){
+	     int x_pos_cnt;
+	     int xpos,ypos;
+	     for(x_pos_cnt=0;x_pos_cnt<PIXEL_PER_PACKET;x_pos_cnt++){
+		 if((rec_packet.xres_screen + x_pos_cnt) >= DISPLAY_XRES){
+		     xpos = rec_packet.xres_screen + x_pos_cnt - DISPLAY_XRES;
+		     ypos = rec_packet.yres_screen + 1;
+		     /*if((ypos & 1) == 1)
+			 continue;
+			 ypos = ypos/2;*/
+		     location = ((xpos + vinfo.xoffset)*bpp/8) + (ypos+vinfo.yoffset)*line_len;
+		     memcpy(buf+location+1,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),RGB_BYTE);
+		 } else {
+		     xpos = rec_packet.xres_screen + x_pos_cnt;
+		     ypos = rec_packet.yres_screen;
+		     /*if((ypos & 1) == 1)
+			 continue;
+			 ypos = ypos/2;*/
+		     location = ((xpos + vinfo.xoffset)*bpp/8) + (ypos+vinfo.yoffset)*line_len;
+#ifdef YUVMODE
+		     struct RGB recRGB,dispRGB;
+		     memcpy(&recRGB,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),RGB_BYTE);
+printf("YUV = %u %u %u\n",recRGB.R,recRGB.G,recRGB.B);		     
+		     dispRGB = YUV2RGB(recRGB,dispRGB,CbCr_flag);
+printf("RGB = %u %u %u\n",dispRGB.R,dispRGB.G,dispRGB.B);		     
+		     memcpy(buf+location,&dispRGB,RGB_BYTE);
+		     if(CbCr_flag==1) CbCr_flag=0;
+		     else CbCr_flag = 1;
+#else
+		     //printf("X = %d, %d\n",*(rec_packet.color+(x_pos_cnt*RGB_BYTE)), *(rec_packet.color+(x_pos_cnt*RGB_BYTE)+1) );
+//printf("X[%d] = %u, %d\n",x_pos_cnt,rec_packet.color[x_pos_cnt], *(rec_packet.color+(x_pos_cnt*RGB_BYTE)+1) );
+		     memcpy(buf+location+1,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),RGB_BYTE);
+#endif
+		 }
+		 //printf("%d %d \n",xpos,ypos);
+		 //location = ((xpos + vinfo.xoffset)*bpp/8) + (ypos+vinfo.yoffset)*line_len;
+		 //printf("ptr=%p *val=%#x &val=%#x \n",rec_packet.color,*(rec_packet.color + j), &rec_packet.color);
+		 //memcpy(buf+location,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),sizeof(unsigned int *));
+	     } 
+	/* } else {
+printf("error!\n");
+	 }*/
 	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
      }
 }
@@ -137,7 +228,7 @@ int main(int argc, char **argv)
      line_len = finfo.line_length;
 
      screensize = xres * yres * bpp / BIT;
-     printf("%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,line_len);
+     printf("RECVFRAM Atlys Ver0.1\n%d(pixel)x%d(line), %d(bit per pixel), %d(line length)\n",xres,yres,bpp,line_len);
      /* Handler if socket get a packet, it will be mapped on memory */ 
      
      char *buf =0;
