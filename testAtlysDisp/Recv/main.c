@@ -30,7 +30,7 @@
 
 
 #define BIT 8
-//#define YUVMODE
+#define YUVMODE
 #define DATA_YUV
 
 #ifdef DATA_YUV
@@ -71,7 +71,7 @@ int BindUDPconnect(int sock, struct sockaddr_in addr, struct sockaddr_in recv, i
      addr.sin_family = AF_INET;
      addr.sin_port = htons(port);
      addr.sin_addr.s_addr = INADDR_ANY;
-     
+    
      if(bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1){
 	 fprintf(stderr,"cannot bind\n");
 	 exit(1);
@@ -107,23 +107,33 @@ struct RGB{
     char R;
 };
 
-struct RGB YUV2RGB(struct RGB recRGB,struct RGB dispRGB, int CbCr_flag){
-    unsigned int Y = recRGB.G;
-    unsigned int CB,CR;
-    if(CbCr_flag){
-	 CB = recRGB.R;
-	 CR = dispRGB.R;
+int yuv2rgb(char *rgb_color, struct packet *yuv_packet, int packet_cnt){
+    unsigned short int yuv_y = *(yuv_packet->color+(packet_cnt*RGB_BYTE));
+    unsigned short int yuv_cb,yuv_cr;
+    if((packet_cnt%2) == 1){
+	yuv_cb = *(yuv_packet->color+(packet_cnt*RGB_BYTE)+1);
+	yuv_cr = *(yuv_packet->color+((packet_cnt-1)*RGB_BYTE)+1);
     } else {
-	CR = recRGB.R;
-	CB = dispRGB.R;
+	yuv_cr = *(yuv_packet->color+(packet_cnt*RGB_BYTE)+1 );
+	yuv_cb = *(yuv_packet->color+((packet_cnt-1)*RGB_BYTE)+1);
     }
-     
-    struct RGB RGB_YUV;
-    RGB_YUV.R = 1.164 * (Y - 16) + (1.696 * (CR - 128));
-    RGB_YUV.G = 1.164 * (Y - 16) - (0.391 * (CB - 128)) - (0.813 * (CR - 128));
-    RGB_YUV.B = 1.164 * (Y - 16) + (2.018 * (CB - 128));
-
-    return RGB_YUV;
+    int over_value = 0;
+ 
+    //printf("yuv = %u %u %u\n",yuv_y, yuv_cb, yuv_cr);
+    short int rgb_r,rgb_g,rgb_b;
+    //if((yuv_y < hoge) & (yuv_cr < hoge) & (yuv_cb < hoge)){
+	rgb_r = 1.164 * (yuv_y - 16) + (1.696 * (yuv_cr - 128));
+	rgb_g = 1.164 * (yuv_y - 16) - (0.391 * (yuv_cb - 128)) - (0.813 * (yuv_cr - 128));
+	rgb_b = 1.164 * (yuv_y - 16) + (2.018 * (yuv_cb - 128));
+   /* } else {
+	over_value = 1;
+    }*/
+    //printf("after rgb = %u %u %u\n",rgb_r, rgb_g, rgb_b);
+    rgb_color[0] = rgb_r;
+    rgb_color[1] = rgb_g;
+    rgb_color[2] = rgb_b; 
+    //printf("%d %d %d \n",rgb_color[0],rgb_color[1],rgb_color[2] );
+    return over_value;
 }
 #endif
 
@@ -133,6 +143,9 @@ void LoopRecvPacket(int sock, struct sockaddr_in recv, char *buf, struct fb_var_
      int rec;
      socklen_t sin_size = sizeof(struct sockaddr_in);
 #ifdef YUVMODE
+     char rgb_color;
+     rgb_color = (char *)malloc(sizeof(char)*3);
+
      int CbCr_flag=1;
 #endif
 
@@ -164,14 +177,19 @@ void LoopRecvPacket(int sock, struct sockaddr_in recv, char *buf, struct fb_var_
 			 ypos = ypos/2;*/
 		     location = ((xpos + vinfo.xoffset)*bpp/8) + (ypos+vinfo.yoffset)*line_len;
 #ifdef YUVMODE
-		     struct RGB recRGB,dispRGB;
-		     memcpy(&recRGB,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),RGB_BYTE);
-printf("YUV = %u %u %u\n",recRGB.R,recRGB.G,recRGB.B);		     
-		     dispRGB = YUV2RGB(recRGB,dispRGB,CbCr_flag);
-printf("RGB = %u %u %u\n",dispRGB.R,dispRGB.G,dispRGB.B);		     
-		     memcpy(buf+location,&dispRGB,RGB_BYTE);
-		     if(CbCr_flag==1) CbCr_flag=0;
-		     else CbCr_flag = 1;
+		     //struct RGB recRGB,dispRGB;
+		     //memcpy(&recRGB,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),RGB_BYTE);
+		     //memcpy(&rgb_color,(unsigned int *)(rec_packet.color+(x_pos_cnt*RGB_BYTE)),RGB_BYTE);
+//printf("YUV = %u %u %u\n",recRGB.R,recRGB.G,recRGB.B);		     
+		     //dispRGB = YUV2RGB(recRGB,dispRGB,CbCr_flag);
+		     //printf("X = %d, %d, %d\n",*(rec_packet.color+(x_pos_cnt*RGB_BYTE)), *(rec_packet.color+(x_pos_cnt*RGB_BYTE)+1) ,*(rec_packet.color+(x_pos_cnt*RGB_BYTE)+2));
+		     int check_yuv;
+		     if(check_yuv = yuv2rgb(&rgb_color, &rec_packet, x_pos_cnt) == 1){
+			 printf("error\n");
+		     }
+
+//printf("RGB = %u %u %u\n",dispRGB.R,dispRGB.G,dispRGB.B);		     
+		     memcpy(buf+location,&rgb_color,3);
 #else
 		     //printf("X = %d, %d\n",*(rec_packet.color+(x_pos_cnt*RGB_BYTE)), *(rec_packet.color+(x_pos_cnt*RGB_BYTE)+1) );
 //printf("X[%d] = %u, %d\n",x_pos_cnt,rec_packet.color[x_pos_cnt], *(rec_packet.color+(x_pos_cnt*RGB_BYTE)+1) );
