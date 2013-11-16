@@ -33,6 +33,8 @@
 //#define YUVMODE
 #define DATA_YUV
 
+//#define DEBUG
+
 #ifdef DATA_YUV
 
 #define DATA_SIZE 1280
@@ -152,11 +154,14 @@ void LoopRecvPacket(int sock, struct sockaddr_in recv, char *buf, struct fb_var_
 	     fprintf(stderr, "cannot receive a packet \n");
 	     exit(1);
 	 }
-//printf("X pos = %d, Y = %d\n",rec_packet.xres_screen,rec_packet.yres_screen);
 	 yres_screen = (rec_packet.xyres_screen & 0xfff);
 	 xres_screen = ((rec_packet.xyres_screen >> 12) & 1) * 640;
+#ifdef DEBUG
+printf("%04d %04d\n",xres_screen,yres_screen);
+#endif
 	 location = ((xres_screen + vinfo.xoffset) * bpp/8) + (yres_screen+vinfo.yoffset)*line_len;
 
+#ifndef DEBUG
 	 //if((rec_packet.xres_screen < (DISPLAY_XRES - PIXEL_PER_PACKET)) & (rec_packet.yres_screen < DISPLAY_YRES)){
 	     int x_pos_cnt;
 	     int xpos,ypos;
@@ -205,6 +210,7 @@ void LoopRecvPacket(int sock, struct sockaddr_in recv, char *buf, struct fb_var_
 printf("error!\n");
 	 }*/
 	 msync((unsigned int *)(buf+location),sizeof(unsigned int *),MS_ASYNC);
+#endif
      }
 }
 
